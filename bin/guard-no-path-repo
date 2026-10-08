@@ -1,0 +1,22 @@
+#!/usr/bin/env php
+<?php
+
+declare(strict_types=1);
+
+$manifest = dirname(__DIR__).'/composer.json';
+$decoded = json_decode((string) file_get_contents($manifest), true);
+
+if (!is_array($decoded)) {
+    fwrite(STDERR, "composer.json nie jest poprawnym JSON-em.\n");
+    exit(1);
+}
+
+foreach ($decoded['repositories'] ?? [] as $repository) {
+    if (is_array($repository) && ($repository['type'] ?? '') === 'path') {
+        fwrite(STDERR, "composer.json zawiera repozytorium typu path. To zostaje tylko w drzewie roboczym.\n");
+        exit(1);
+    }
+}
+
+echo "Brak repozytorium path.\n";
+exit(0);

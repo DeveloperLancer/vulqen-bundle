@@ -1,0 +1,42 @@
+{
+    "name": "vulqen/symfony-bundle",
+    "description": "Instrumentacja Symfony dla Vulqen. Zależność od vulqen/php-sdk dochodzi w Fazie 4.",
+    "type": "symfony-bundle",
+    "license": "proprietary",
+    "minimum-stability": "stable",
+    "prefer-stable": true,
+    "require": {
+        "php": "^8.2",
+        "symfony/config": "^6.4 || ^7.4",
+        "symfony/dependency-injection": "^6.4 || ^7.4",
+        "symfony/http-kernel": "^6.4 || ^7.4"
+    },
+    "require-dev": {
+        "phpstan/phpstan": "^2",
+        "phpunit/phpunit": "^12.5.33",
+        "symfony/framework-bundle": "^7.4",
+        "symfony/yaml": "^7.4"
+    },
+    "autoload": {
+        "psr-4": {
+            "Vulqen\\SymfonyBundle\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Vulqen\\SymfonyBundle\\Tests\\": "tests/"
+        }
+    },
+    "config": {
+        "sort-packages": true
+    },
+    "extra": {
+        "symfony": {
+            "bundle": "Vulqen\\SymfonyBundle\\VulqenBundle"
+        }
+    },
+    "scripts": {
+        "guard-path": "php bin/guard-no-path-repo",
+        "phpstan": "phpstan analyse --memory-limit=512M"
+    }
+}

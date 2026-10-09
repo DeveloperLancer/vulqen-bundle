@@ -56,7 +56,11 @@ jobs:
         run: composer update --no-interaction --prefer-dist
 
       - name: Show resolved versions
-        run: composer show symfony/http-kernel doctrine/dbal doctrine/doctrine-bundle vulqen/php-sdk
+        run: |
+          composer show symfony/http-kernel
+          composer show doctrine/dbal
+          composer show doctrine/doctrine-bundle
+          composer show vulqen/php-sdk
 
       - name: Run PHPUnit
         run: vendor/bin/phpunit

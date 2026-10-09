@@ -2,3 +2,9 @@ parameters:
     level: 6
     paths:
         - src
+    reportUnmatchedIgnoredErrors: false
+    ignoreErrors:
+        # DBAL 3 przyjmuje parametry w execute, DBAL 4 nie. Błąd pojawia się tylko na DBAL 4.
+        -
+            identifier: arguments.count
+            path: src/Doctrine/TracingStatement.php

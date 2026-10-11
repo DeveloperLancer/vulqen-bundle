@@ -59,6 +59,11 @@ final class VulqenBundle extends AbstractBundle
         $container->parameters()->set('vulqen.default_environment', 'prod');
 
         if (!$config['enabled']) {
+            // The processed config still holds the env placeholders. Symfony then
+            // requires every such placeholder to appear in the dumped container.
+            // Resolving them here marks the variables used without registering listeners.
+            $builder->resolveEnvPlaceholders($config);
+
             return;
         }
 

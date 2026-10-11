@@ -132,6 +132,18 @@ final class InstrumentationTest extends TestCase
         self::assertSame([], $this->transport($kernel)->sent);
     }
 
+    public function testEnabledFalseStillAcceptsEnvPlaceholders(): void
+    {
+        $kernel = $this->kernel([
+            'enabled' => false,
+            'dsn' => '%env(default::VULQEN_DSN)%',
+            'environment' => '%env(default:vulqen.default_environment:VULQEN_ENVIRONMENT)%',
+            'release' => '%env(default::VULQEN_RELEASE)%',
+        ]);
+
+        self::assertFalse($kernel->getContainer()->has('vulqen.client'));
+    }
+
     public function testAnEmptyDsnSendsNothing(): void
     {
         $kernel = $this->kernel(['dsn' => '']);

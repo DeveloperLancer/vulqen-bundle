@@ -20,7 +20,7 @@ final class TracingStatement extends AbstractStatementMiddleware
 
     public function execute(mixed $params = null): Result
     {
-        $span = $this->tracer->start($this->sql);
+        $span = $this->tracer->start($this->sql, $params);
         try {
             return $params === null ? parent::execute() : parent::execute(...[$params]);
         } finally {

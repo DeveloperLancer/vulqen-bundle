@@ -7,14 +7,20 @@ namespace Vulqen\SymfonyBundle;
 use Doctrine\DBAL\Driver\Middleware;
 use Symfony\Component\Config\Definition\Builder\ArrayNodeDefinition;
 use Symfony\Component\Config\Definition\Configurator\DefinitionConfigurator;
+use Symfony\Component\Console\ConsoleEvents;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigurator;
 use Symfony\Component\HttpKernel\Bundle\AbstractBundle;
+use Symfony\Component\Messenger\Middleware\MiddlewareInterface;
 use Vulqen\Sdk\Client;
 use Vulqen\Sdk\Options;
 use Vulqen\Sdk\Transport\CurlTransport;
+use Vulqen\SymfonyBundle\DependencyInjection\HttpClientPass;
+use Vulqen\SymfonyBundle\DependencyInjection\MessengerMiddlewarePass;
 use Vulqen\SymfonyBundle\Doctrine\VulqenMiddleware;
+use Vulqen\SymfonyBundle\EventListener\ConsoleListener;
 use Vulqen\SymfonyBundle\EventListener\HttpListener;
+use Vulqen\SymfonyBundle\Messenger\TraceMiddleware;
 
 use function Symfony\Component\DependencyInjection\Loader\Configurator\param;
 use function Symfony\Component\DependencyInjection\Loader\Configurator\service;
@@ -26,7 +32,7 @@ use function Symfony\Component\DependencyInjection\Loader\Configurator\service;
 final class VulqenBundle extends AbstractBundle
 {
     public const SDK_NAME = 'vulqen-symfony';
-    public const VERSION = '0.1.0';
+    public const VERSION = '0.2.0';
 
     protected string $extensionAlias = 'vulqen';
 
@@ -89,5 +95,23 @@ final class VulqenBundle extends AbstractBundle
                 ->args([service('vulqen.client')])
                 ->tag('doctrine.middleware');
         }
+
+        if (class_exists(ConsoleEvents::class)) {
+            $services->set('vulqen.console_listener', ConsoleListener::class)
+                ->args([service('vulqen.client')])
+                ->tag('kernel.event_subscriber');
+        }
+
+        if (interface_exists(MiddlewareInterface::class)) {
+            $services->set('vulqen.trace_middleware', TraceMiddleware::class)
+                ->args([service('vulqen.client')]);
+        }
+    }
+
+    public function build(ContainerBuilder $container): void
+    {
+        parent::build($container);
+        $container->addCompilerPass(new HttpClientPass());
+        $container->addCompilerPass(new MessengerMiddlewarePass(), priority: 10);
     }
 }

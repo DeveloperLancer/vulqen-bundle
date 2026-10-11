@@ -17,6 +17,7 @@ PHP 8.2+, Symfony 6.4 i 7.x. Bundle nie dociąga Messengera ani Doctrine jako tw
 
 ## Zasady
 
+- Identyfikatory w kodzie, nazwy testów i komentarze w nowym kodzie są po angielsku, w ASCII ([D-077](../vulqen-docs/plan/09-rejestr-decyzji.md)).
 - Pusty DSN albo `enabled: false` zostawia aplikację w spokoju.
 - Wysyłka wisi na `kernel.terminate`. Timeouty i obwód są w SDK i nie wolno ich obchodzić dłuższym wywołaniem w bundlu.
 - Proces długo żyjący czyści stan po każdej transakcji (`ResetInterface`).

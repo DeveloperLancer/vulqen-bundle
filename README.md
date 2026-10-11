@@ -13,7 +13,7 @@ Paczki są prywatne. Composer potrzebuje obu repozytoriów VCS i tokenu GitHub z
 ```bash
 composer config repositories.vulqen-php-sdk vcs https://github.com/DeveloperLancer/vulqen-sdk-php.git
 composer config repositories.vulqen-symfony-bundle vcs https://github.com/DeveloperLancer/vulqen-bundle.git
-composer require vulqen/symfony-bundle:^0.1
+composer require vulqen/symfony-bundle:^0.2
 ```
 
 Recipe Flex jeszcze nie ma (D-066), więc trzy kroki są ręczne.
@@ -63,7 +63,7 @@ Trasy z `excluded_routes` i trasy wewnętrzne Symfony (`_wdt`, `_profiler`) nie 
 ## Testy
 
 ```bash
-composer config repositories.vulqen-php-sdk '{"type":"path","url":"../vulqen-sdk-php","options":{"versions":{"vulqen/php-sdk":"0.1.0"}}}'
+composer config repositories.vulqen-php-sdk '{"type":"path","url":"../vulqen-sdk-php","options":{"versions":{"vulqen/php-sdk":"0.2.0"}}}'
 composer update
 vendor/bin/phpunit
 composer phpstan

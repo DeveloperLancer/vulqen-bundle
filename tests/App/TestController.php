@@ -10,8 +10,11 @@ use Symfony\Component\HttpFoundation\Response;
 
 final class TestController
 {
-    public function __construct(private readonly ?Connection $connection = null)
-    {
+    public function __construct(
+        private readonly ?Connection $connection = null,
+        private readonly ?object $bus = null,
+        private readonly ?object $http = null,
+    ) {
     }
 
     public function order(string $id): Response
@@ -38,6 +41,25 @@ final class TestController
     public function health(): Response
     {
         $this->connection?->executeQuery('SELECT 1');
+
+        return new Response('ok');
+    }
+
+    public function publish(): Response
+    {
+        if (is_object($this->bus) && method_exists($this->bus, 'dispatch')) {
+            $this->bus->dispatch(new SendInvoice());
+        }
+
+        return new Response('sent');
+    }
+
+    public function remote(): Response
+    {
+        if (is_object($this->http) && method_exists($this->http, 'request')) {
+            $this->http->request('GET', 'https://api.example.test/ping');
+            $this->http->request('GET', 'https://INGEST.EXAMPLE.TEST/envelope');
+        }
 
         return new Response('ok');
     }

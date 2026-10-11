@@ -30,7 +30,7 @@ final class InstrumentationTest extends TestCase
         (new Filesystem())->remove(TestKernel::baseDir());
     }
 
-    public function testTransakcjaMaNazweTrasyStatusISpanySql(): void
+    public function testATransactionHasTheRouteNameStatusAndSqlSpans(): void
     {
         $kernel = $this->kernel();
         $response = $this->request($kernel, '/orders/5');
@@ -61,7 +61,7 @@ final class InstrumentationTest extends TestCase
         self::assertStringNotContainsString(' 5', implode("\n", $descriptions));
     }
 
-    public function testNieznanaTrasaToHttpUnmatched(): void
+    public function testAnUnknownRouteIsHttpUnmatched(): void
     {
         $kernel = $this->kernel();
         $response = $this->request($kernel, '/nie-ma-takiej');
@@ -75,7 +75,7 @@ final class InstrumentationTest extends TestCase
         self::assertSame([], $transport->itemsOfType('error'), '404 nie jest błędem aplikacji.');
     }
 
-    public function testWyjatekMaKlaseRamkiIInApp(): void
+    public function testAnExceptionHasAClassFramesAndInApp(): void
     {
         $kernel = $this->kernel();
         $response = $this->request($kernel, '/fail');
@@ -101,7 +101,7 @@ final class InstrumentationTest extends TestCase
         self::assertSame($transactions[0]['id'], $errors[0]['transaction_id']);
     }
 
-    public function testNaglowekAuthorizationNieTrafiaDoZdarzenia(): void
+    public function testTheAuthorizationHeaderDoesNotReachTheEvent(): void
     {
         $kernel = $this->kernel();
         $this->request($kernel, '/leak', ['HTTP_AUTHORIZATION' => 'Bearer sekret-tokenu-123']);
@@ -112,7 +112,7 @@ final class InstrumentationTest extends TestCase
         self::assertStringNotContainsString('Bearer', $sent);
     }
 
-    public function testWykluczonaTrasaNieWysylaNic(): void
+    public function testAnExcludedRouteSendsNothing(): void
     {
         $kernel = $this->kernel(['excluded_routes' => ['app_health']]);
         $response = $this->request($kernel, '/health');
@@ -121,7 +121,7 @@ final class InstrumentationTest extends TestCase
         self::assertSame([], $this->transport($kernel)->sent);
     }
 
-    public function testEnabledFalseNieRejestrujeSluchaczy(): void
+    public function testEnabledFalseRegistersNoListeners(): void
     {
         $kernel = $this->kernel(['enabled' => false]);
         $response = $this->request($kernel, '/orders/5');
@@ -132,7 +132,7 @@ final class InstrumentationTest extends TestCase
         self::assertSame([], $this->transport($kernel)->sent);
     }
 
-    public function testPustyDsnNicNieWysyla(): void
+    public function testAnEmptyDsnSendsNothing(): void
     {
         $kernel = $this->kernel(['dsn' => '']);
         $response = $this->request($kernel, '/fail');
@@ -144,7 +144,7 @@ final class InstrumentationTest extends TestCase
         self::assertSame([], $this->transport($kernel)->sent);
     }
 
-    public function testBezDoctrineBundleDziala(): void
+    public function testItWorksWithoutDoctrineBundle(): void
     {
         $kernel = $this->kernel([], false);
         $this->request($kernel, '/orders/5');
@@ -158,7 +158,7 @@ final class InstrumentationTest extends TestCase
     /**
      * R-005: drugie żądanie w tym samym kernelu nie dziedziczy transakcji, spanów ani błędów pierwszego.
      */
-    public function testDrugieZadanieWTymSamymKerneluNieDziedziczyStanu(): void
+    public function testASecondRequestInTheSameKernelDoesNotInheritState(): void
     {
         $kernel = $this->kernel();
         $transport = $this->transport($kernel);
@@ -168,11 +168,11 @@ final class InstrumentationTest extends TestCase
 
         $this->request($kernel, '/orders/7');
 
-        $items = $transport->items();
-        self::assertCount(1, $items);
-        self::assertSame('transaction', $items[0]['type']);
-        self::assertSame('app_order_show', $items[0]['name']);
-        self::assertSame('ok', $items[0]['outcome']);
+        $transactions = $transport->itemsOfType('transaction');
+        self::assertCount(1, $transactions);
+        self::assertSame('app_order_show', $transactions[0]['name']);
+        self::assertSame('ok', $transactions[0]['outcome']);
+        self::assertSame([], $transport->itemsOfType('error'));
 
         $this->request($kernel, '/orders/8');
         $transactions = $transport->itemsOfType('transaction');
@@ -181,7 +181,7 @@ final class InstrumentationTest extends TestCase
         self::assertCount(count($this->spans($transactions[0])), $this->spans($transactions[1]));
     }
 
-    public function testPadajacyTransportNieZmieniaOdpowiedzi(): void
+    public function testAFailingTransportDoesNotChangeTheResponse(): void
     {
         $kernel = $this->kernel();
         $this->transport($kernel)->throw = true;

@@ -1,5 +1,6 @@
 {
     "name": "vulqen/symfony-bundle",
+    "version": "0.2.0",
     "description": "Instrumentacja Symfony dla Vulqen: żądania HTTP, wyjątki i zapytania DBAL.",
     "type": "symfony-bundle",
     "license": "proprietary",
@@ -18,18 +19,24 @@
         "symfony/event-dispatcher": "^6.4 || ^7.4",
         "symfony/http-foundation": "^6.4 || ^7.4",
         "symfony/http-kernel": "^6.4 || ^7.4",
-        "vulqen/php-sdk": "^0.1"
+        "vulqen/php-sdk": "^0.2"
     },
     "require-dev": {
         "doctrine/dbal": "^3.8 || ^4",
         "doctrine/doctrine-bundle": "^2.11",
         "phpstan/phpstan": "^2",
         "phpunit/phpunit": "^11.5.50 || ^12.5.33",
+        "symfony/console": "^6.4 || ^7.4",
         "symfony/framework-bundle": "^6.4 || ^7.4",
+        "symfony/http-client": "^6.4 || ^7.4",
+        "symfony/messenger": "^6.4 || ^7.4",
         "symfony/yaml": "^6.4 || ^7.4"
     },
     "suggest": {
-        "doctrine/doctrine-bundle": "Spany db.query z middleware DBAL"
+        "doctrine/doctrine-bundle": "Spany db.query z middleware DBAL",
+        "symfony/console": "Transakcje komend konsoli",
+        "symfony/http-client": "Span http.client i nagłówek traceparent",
+        "symfony/messenger": "Ślad wiadomości od wysyłki do odbioru"
     },
     "autoload": {
         "psr-4": {

@@ -116,6 +116,7 @@ final class HttpListener implements EventSubscriberInterface
             $transaction->markError();
         }
         $transaction->setResources(memory_get_peak_usage(true), $this->cpuMs());
+        $this->client->setRequestBody($event->getRequest()->getContent());
 
         $this->client->finishTransaction();
         $this->client->flush();

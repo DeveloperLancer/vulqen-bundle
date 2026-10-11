@@ -9,7 +9,8 @@ use Vulqen\Sdk\Model\Span;
 use Vulqen\Sdk\SqlNormalizer;
 
 /**
- * Span db.query z tekstem po normalizacji SDK. Parametry zapytania nigdy nie trafiają do zdarzenia (D-020).
+ * Span db.query z tekstem po normalizacji SDK. Parametry idą do db.bindings tylko,
+ * gdy projekt włączy sql_bindings. Klient SDK zdejmuje je w przeciwnym razie.
  */
 final class QueryTracer
 {
@@ -47,18 +48,25 @@ final class QueryTracer
         };
     }
 
-    public function start(string $sql): ?Span
+    public function start(string $sql, mixed $params = null): ?Span
     {
         if ($this->client->transaction() === null) {
             return null;
         }
 
         $statement = $this->normalize($sql);
-
-        return $this->client->startSpan(self::OP, $statement, [
+        $attrs = [
             'db.system' => $this->system,
             'db.statement' => $statement,
-        ]);
+        ];
+        if (is_array($params) && $params !== []) {
+            try {
+                $attrs['db.bindings'] = json_encode($params, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE);
+            } catch (\Throwable) {
+            }
+        }
+
+        return $this->client->startSpan(self::OP, $statement, $attrs);
     }
 
     public function finish(?Span $span): void

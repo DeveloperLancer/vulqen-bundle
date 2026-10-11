@@ -19,6 +19,9 @@ final class TracingHttpClient implements HttpClientInterface
     {
     }
 
+    /**
+     * @param array<string, mixed> $options
+     */
     public function request(string $method, string $url, array $options = []): ResponseInterface
     {
         $host = parse_url($url, PHP_URL_HOST);
@@ -45,6 +48,9 @@ final class TracingHttpClient implements HttpClientInterface
         return $this->client->stream($responses, $timeout);
     }
 
+    /**
+     * @param array<string, mixed> $options
+     */
     public function withOptions(array $options): static
     {
         $clone = clone $this;

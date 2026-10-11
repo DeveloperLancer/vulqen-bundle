@@ -1,6 +1,5 @@
 {
     "name": "vulqen/symfony-bundle",
-    "version": "0.2.0",
     "description": "Instrumentacja Symfony dla Vulqen: żądania HTTP, wyjątki i zapytania DBAL.",
     "type": "symfony-bundle",
     "license": "proprietary",

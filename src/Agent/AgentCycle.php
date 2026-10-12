@@ -37,8 +37,9 @@ final class AgentCycle
     {
         $metrics = [];
         $this->gauge($metrics, 'host.cpu.ratio', $this->hosts->cpuRatio());
-        $this->gauge($metrics, 'host.memory.ratio', $this->hosts->memoryRatio());
-        $this->gauge($metrics, 'host.disk.ratio', $this->hosts->diskRatio($this->diskPath));
+        $this->gauge($metrics, 'host.cpu.limit', $this->hosts->cpuLimit());
+        $this->memory($metrics);
+        $this->disk($metrics);
 
         if ($this->fpmStatusUrl !== '') {
             $body = $this->status->get($this->fpmStatusUrl);
@@ -69,5 +70,42 @@ final class AgentCycle
             return;
         }
         $metrics[] = ['name' => $name, 'kind' => 'gauge', 'value' => $value, 'attrs' => []];
+    }
+
+    /**
+     * @param list<array{name: string, kind: string, value: float, attrs: array<string, string>}> $metrics
+     */
+    private function memory(array &$metrics): void
+    {
+        $pair = $this->hosts->memoryBytes();
+        if ($pair === null) {
+            $this->gauge($metrics, 'host.memory.ratio', $this->hosts->memoryRatio());
+
+            return;
+        }
+        $this->gauge($metrics, 'host.memory.used_bytes', $pair['used']);
+        $this->gauge($metrics, 'host.memory.limit_bytes', $pair['limit']);
+        $this->gauge($metrics, 'host.memory.ratio', $pair['limit'] > 0 ? self::clamp($pair['used'] / $pair['limit']) : null);
+    }
+
+    /**
+     * @param list<array{name: string, kind: string, value: float, attrs: array<string, string>}> $metrics
+     */
+    private function disk(array &$metrics): void
+    {
+        $pair = $this->hosts->diskBytes($this->diskPath);
+        if ($pair === null) {
+            $this->gauge($metrics, 'host.disk.ratio', $this->hosts->diskRatio($this->diskPath));
+
+            return;
+        }
+        $this->gauge($metrics, 'host.disk.used_bytes', $pair['used']);
+        $this->gauge($metrics, 'host.disk.total_bytes', $pair['total']);
+        $this->gauge($metrics, 'host.disk.ratio', $pair['total'] > 0 ? self::clamp($pair['used'] / $pair['total']) : null);
+    }
+
+    private static function clamp(float $value): float
+    {
+        return max(0.0, min(1.0, $value));
     }
 }

@@ -115,6 +115,13 @@ TXT;
                 return null;
             }
 
+            public function cpuLimit(): ?float
+            {
+                $this->called = true;
+
+                return null;
+            }
+
             public function memoryRatio(): ?float
             {
                 $this->called = true;
@@ -122,7 +129,21 @@ TXT;
                 return null;
             }
 
+            public function memoryBytes(): ?array
+            {
+                $this->called = true;
+
+                return null;
+            }
+
             public function diskRatio(string $path): ?float
+            {
+                $this->called = true;
+
+                return null;
+            }
+
+            public function diskBytes(string $path): ?array
             {
                 $this->called = true;
 
@@ -172,7 +193,12 @@ TXT;
         file_put_contents($dir.'/memory.max', "1000\n");
 
         try {
-            self::assertEqualsWithDelta(0.25, (new ProcHostReader($root))->memoryRatio(), 0.000001);
+            $reader = new ProcHostReader($root);
+            self::assertEqualsWithDelta(0.25, $reader->memoryRatio(), 0.000001);
+            $bytes = $reader->memoryBytes();
+            self::assertNotNull($bytes);
+            self::assertEqualsWithDelta(250, $bytes['used'], 0.000001);
+            self::assertEqualsWithDelta(1000, $bytes['limit'], 0.000001);
         } finally {
             unlink($dir.'/memory.current');
             unlink($dir.'/memory.max');
@@ -181,6 +207,111 @@ TXT;
             rmdir($root.'/sys');
             rmdir($root);
         }
+    }
+
+    public function testMeminfoBytesScaleKibibytesToBytes(): void
+    {
+        $root = sys_get_temp_dir().'/vulqen-host-'.bin2hex(random_bytes(4));
+        mkdir($root.'/proc', 0777, true);
+        file_put_contents($root.'/proc/meminfo', "MemTotal:       2048 kB\nMemAvailable:   512 kB\n");
+
+        try {
+            $reader = new ProcHostReader($root);
+            $bytes = $reader->memoryBytes();
+            self::assertNotNull($bytes);
+            self::assertEqualsWithDelta(1536 * 1024, $bytes['used'], 0.000001);
+            self::assertEqualsWithDelta(2048 * 1024, $bytes['limit'], 0.000001);
+            self::assertEqualsWithDelta(0.75, $reader->memoryRatio(), 0.000001);
+        } finally {
+            self::removeTree($root);
+        }
+    }
+
+    public function testCgroupCpuQuotaIsTheCoreLimit(): void
+    {
+        $root = sys_get_temp_dir().'/vulqen-host-'.bin2hex(random_bytes(4));
+        mkdir($root.'/sys/fs/cgroup', 0777, true);
+        mkdir($root.'/proc', 0777, true);
+        file_put_contents($root.'/sys/fs/cgroup/cpu.max', "200000 100000\n");
+        file_put_contents($root.'/proc/stat', "cpu  1 0 0 1\ncpu0 1 0 0 1\ncpu1 1 0 0 1\ncpu2 1 0 0 1\n");
+
+        try {
+            self::assertEqualsWithDelta(2, (new ProcHostReader($root))->cpuLimit(), 0.000001);
+        } finally {
+            self::removeTree($root);
+        }
+    }
+
+    public function testAnUnlimitedCgroupQuotaCountsProcessors(): void
+    {
+        $root = sys_get_temp_dir().'/vulqen-host-'.bin2hex(random_bytes(4));
+        mkdir($root.'/sys/fs/cgroup', 0777, true);
+        mkdir($root.'/proc', 0777, true);
+        file_put_contents($root.'/sys/fs/cgroup/cpu.max', "max 100000\n");
+        file_put_contents($root.'/proc/stat', "cpu  1 0 0 1\ncpu0 1 0 0 1\ncpu1 1 0 0 1\n");
+
+        try {
+            self::assertEqualsWithDelta(2, (new ProcHostReader($root))->cpuLimit(), 0.000001);
+        } finally {
+            self::removeTree($root);
+        }
+    }
+
+    public function testTheCycleEmitsBytesBesideTheRatios(): void
+    {
+        $cycle = new AgentCycle(
+            new Client(new Options(dsn: '')),
+            $this->sampleHost(),
+            new class implements StatusFetch {
+                public function get(string $url): ?string
+                {
+                    return null;
+                }
+            },
+            '',
+            '',
+            sys_get_temp_dir(),
+            '',
+        );
+
+        $values = [];
+        foreach ($cycle->metrics() as $metric) {
+            $values[$metric['name']] = $metric['value'];
+        }
+
+        self::assertEqualsWithDelta(0.25, $values['host.cpu.ratio'], 0.000001);
+        self::assertEqualsWithDelta(2, $values['host.cpu.limit'], 0.000001);
+        self::assertEqualsWithDelta(500, $values['host.memory.used_bytes'], 0.000001);
+        self::assertEqualsWithDelta(1000, $values['host.memory.limit_bytes'], 0.000001);
+        self::assertEqualsWithDelta(0.5, $values['host.memory.ratio'], 0.000001);
+        self::assertEqualsWithDelta(30, $values['host.disk.used_bytes'], 0.000001);
+        self::assertEqualsWithDelta(100, $values['host.disk.total_bytes'], 0.000001);
+        self::assertEqualsWithDelta(0.3, $values['host.disk.ratio'], 0.000001);
+    }
+
+    public function testARatioWithoutBytesStillShips(): void
+    {
+        $cycle = new AgentCycle(
+            new Client(new Options(dsn: '')),
+            $this->ratioHost(),
+            new class implements StatusFetch {
+                public function get(string $url): ?string
+                {
+                    return null;
+                }
+            },
+            '',
+            '',
+            sys_get_temp_dir(),
+            '',
+        );
+
+        $names = array_column($cycle->metrics(), 'name');
+
+        self::assertContains('host.memory.ratio', $names);
+        self::assertContains('host.disk.ratio', $names);
+        self::assertNotContains('host.memory.used_bytes', $names);
+        self::assertNotContains('host.disk.used_bytes', $names);
     }
 
     public static function fpmFour(): string
@@ -210,7 +341,17 @@ TXT;
                 return null;
             }
 
+            public function cpuLimit(): ?float
+            {
+                return null;
+            }
+
             public function memoryRatio(): ?float
+            {
+                return null;
+            }
+
+            public function memoryBytes(): ?array
             {
                 return null;
             }
@@ -219,6 +360,100 @@ TXT;
             {
                 return null;
             }
+
+            public function diskBytes(string $path): ?array
+            {
+                return null;
+            }
         };
+    }
+
+    private function sampleHost(): HostReadings
+    {
+        return new class implements HostReadings {
+            public function cpuRatio(): ?float
+            {
+                return 0.25;
+            }
+
+            public function cpuLimit(): ?float
+            {
+                return 2;
+            }
+
+            public function memoryRatio(): ?float
+            {
+                return null;
+            }
+
+            public function memoryBytes(): ?array
+            {
+                return ['used' => 500, 'limit' => 1000];
+            }
+
+            public function diskRatio(string $path): ?float
+            {
+                return null;
+            }
+
+            public function diskBytes(string $path): ?array
+            {
+                return ['used' => 30, 'total' => 100];
+            }
+        };
+    }
+
+    private function ratioHost(): HostReadings
+    {
+        return new class implements HostReadings {
+            public function cpuRatio(): ?float
+            {
+                return null;
+            }
+
+            public function cpuLimit(): ?float
+            {
+                return null;
+            }
+
+            public function memoryRatio(): ?float
+            {
+                return 0.4;
+            }
+
+            public function memoryBytes(): ?array
+            {
+                return null;
+            }
+
+            public function diskRatio(string $path): ?float
+            {
+                return 0.2;
+            }
+
+            public function diskBytes(string $path): ?array
+            {
+                return null;
+            }
+        };
+    }
+
+    private static function removeTree(string $root): void
+    {
+        if (!is_dir($root)) {
+            return;
+        }
+        $items = new \RecursiveIteratorIterator(
+            new \RecursiveDirectoryIterator($root, \FilesystemIterator::SKIP_DOTS),
+            \RecursiveIteratorIterator::CHILD_FIRST,
+        );
+        foreach ($items as $item) {
+            if ($item->isDir()) {
+                rmdir($item->getPathname());
+            } else {
+                unlink($item->getPathname());
+            }
+        }
+        rmdir($root);
     }
 }

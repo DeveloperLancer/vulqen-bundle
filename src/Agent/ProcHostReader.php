@@ -45,12 +45,61 @@ final class ProcHostReader implements HostReadings
         return self::clamp(1 - ($idle / $total));
     }
 
+    public function cpuLimit(): ?float
+    {
+        $quota = $this->cgroupQuota();
+        if ($quota !== null) {
+            return $quota['limit'] / $quota['period'];
+        }
+
+        return $this->procCpuCount();
+    }
+
     public function memoryRatio(): ?float
+    {
+        $pair = $this->memoryPair();
+        if ($pair === null) {
+            return null;
+        }
+
+        return self::clamp($pair['used'] / $pair['limit']);
+    }
+
+    public function memoryBytes(): ?array
+    {
+        return $this->memoryPair();
+    }
+
+    public function diskRatio(string $path): ?float
+    {
+        $bytes = $this->diskBytes($path);
+        if ($bytes === null) {
+            return null;
+        }
+
+        return self::clamp($bytes['used'] / $bytes['total']);
+    }
+
+    public function diskBytes(string $path): ?array
+    {
+        $total = @disk_total_space($path);
+        $free = @disk_free_space($path);
+        if ($total === false || $free === false || $total <= 0) {
+            return null;
+        }
+
+        return ['used' => max(0.0, $total - $free), 'total' => $total];
+    }
+
+    /**
+     * @return array{used: float, limit: float}|null
+     */
+    private function memoryPair(): ?array
     {
         $current = $this->read('/sys/fs/cgroup/memory.current');
         $max = $this->read('/sys/fs/cgroup/memory.max');
         if ($current !== null && $max !== null && is_numeric(trim($current)) && is_numeric(trim($max)) && (float) $max > 0) {
-            return self::clamp((float) $current / (float) $max);
+            return ['used' => (float) $current, 'limit' => (float) $max];
         }
 
         $info = $this->read('/proc/meminfo');
@@ -63,28 +112,14 @@ final class ProcHostReader implements HostReadings
             return null;
         }
 
-        return self::clamp(($total - $available) / $total);
-    }
-
-    public function diskRatio(string $path): ?float
-    {
-        $total = @disk_total_space($path);
-        $free = @disk_free_space($path);
-        if ($total === false || $free === false || $total <= 0) {
-            return null;
-        }
-
-        return self::clamp(($total - $free) / $total);
+        return ['used' => max(0.0, $total - $available) * 1024, 'limit' => $total * 1024];
     }
 
     private function cgroupCpu(): ?float
     {
         $stat = $this->read('/sys/fs/cgroup/cpu.stat');
-        $max = $this->read('/sys/fs/cgroup/cpu.max');
-        if ($stat === null || $max === null || !preg_match('/^(\d+)\s+(\d+)/', trim($max), $quota)) {
-            return null;
-        }
-        if (!preg_match('/usage_usec\s+(\d+)/', $stat, $usage)) {
+        $quota = $this->cgroupQuota();
+        if ($stat === null || $quota === null || !preg_match('/usage_usec\s+(\d+)/', $stat, $usage)) {
             return null;
         }
         $used = (float) $usage[1];
@@ -97,13 +132,39 @@ final class ProcHostReader implements HostReadings
             return null;
         }
         $elapsedUsec = ($now - $previousWall) * 1_000_000;
-        $period = (float) $quota[2];
-        $limit = (float) $quota[1];
-        if ($elapsedUsec <= 0 || $period <= 0) {
+        if ($elapsedUsec <= 0) {
             return null;
         }
 
-        return self::clamp(($used - $previousUsed) / ($elapsedUsec * $limit / $period));
+        return self::clamp(($used - $previousUsed) / ($elapsedUsec * $quota['limit'] / $quota['period']));
+    }
+
+    /**
+     * @return array{limit: float, period: float}|null
+     */
+    private function cgroupQuota(): ?array
+    {
+        $max = $this->read('/sys/fs/cgroup/cpu.max');
+        if ($max === null || !preg_match('/^(\d+)\s+(\d+)/', trim($max), $quota)) {
+            return null;
+        }
+        $period = (float) $quota[2];
+        $limit = (float) $quota[1];
+        if ($period <= 0 || $limit <= 0) {
+            return null;
+        }
+
+        return ['limit' => $limit, 'period' => $period];
+    }
+
+    private function procCpuCount(): ?float
+    {
+        $stat = $this->read('/proc/stat');
+        if ($stat === null || preg_match_all('/^cpu\d+/m', $stat, $matches) < 1) {
+            return null;
+        }
+
+        return (float) count($matches[0]);
     }
 
     /**

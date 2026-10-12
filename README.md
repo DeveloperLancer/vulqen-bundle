@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="docs/brand/logo-lockup.svg" width="420" alt="Vulqen">
+</p>
+
 # vulqen/symfony-bundle
 
 Instrumentacja Symfony na paczce `vulqen/php-sdk`: transakcja na każde żądanie HTTP, wyjątki i zapytania Doctrine DBAL. Paczka Composer: `vulqen/symfony-bundle`.

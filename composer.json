@@ -18,7 +18,7 @@
         "symfony/event-dispatcher": "^6.4 || ^7.4",
         "symfony/http-foundation": "^6.4 || ^7.4",
         "symfony/http-kernel": "^6.4 || ^7.4",
-        "vulqen/php-sdk": "^0.3"
+        "vulqen/php-sdk": "^0.4"
     },
     "require-dev": {
         "doctrine/dbal": "^3.8 || ^4",

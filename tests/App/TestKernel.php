@@ -107,6 +107,16 @@ final class TestKernel extends Kernel
         $routes->add('app_order_show', '/orders/{id}')
             ->controller([TestController::class, 'order'])
             ->requirements(['id' => '\d+']);
+        $routes->add('telemetry_overview', '/api/orders/{id}')
+            ->controller([TestController::class, 'order'])
+            ->requirements(['id' => '\d+'])
+            ->defaults([
+                '_api_resource_class' => 'App\\Entity\\Order',
+                '_api_operation_name' => 'other_operation',
+            ]);
+        $routes->add('app_linked', '/linked')
+            ->controller([TestController::class, 'health'])
+            ->defaults(['_api_operation_name' => 'other_operation']);
         $routes->add('app_fail', '/fail')->controller([TestController::class, 'fail']);
         $routes->add('app_leak', '/leak')->controller([TestController::class, 'leak']);
         $routes->add('app_health', '/health')->controller([TestController::class, 'health']);

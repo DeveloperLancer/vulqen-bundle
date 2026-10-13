@@ -41,6 +41,7 @@ final class InstrumentationTest extends TestCase
         $transaction = $transactions[0];
         self::assertSame('app_order_show', $transaction['name']);
         self::assertSame('http.server', $transaction['op']);
+        self::assertArrayNotHasKey('api_platform', $transaction);
         self::assertSame(200, $transaction['http_status']);
         self::assertSame('ok', $transaction['outcome']);
         self::assertIsInt($transaction['memory_peak_bytes'] ?? null);
@@ -59,6 +60,23 @@ final class InstrumentationTest extends TestCase
         $descriptions = array_column($this->spans($transaction), 'description');
         self::assertContains('SELECT note FROM orders WHERE id = ?', $descriptions);
         self::assertStringNotContainsString(' 5', implode("\n", $descriptions));
+    }
+
+    public function testAResourceClassIsApiPlatform(): void
+    {
+        $kernel = $this->kernel();
+        $transport = $this->transport($kernel);
+
+        $this->request($kernel, '/api/orders/5');
+        $api = $transport->itemsOfType('transaction');
+        self::assertCount(1, $api);
+        self::assertSame('telemetry_overview', $api[0]['name']);
+        self::assertTrue($api[0]['api_platform']);
+
+        $this->request($kernel, '/linked');
+        $linked = $transport->itemsOfType('transaction')[1];
+        self::assertSame('app_linked', $linked['name']);
+        self::assertArrayNotHasKey('api_platform', $linked);
     }
 
     public function testAnUnknownRouteIsHttpUnmatched(): void

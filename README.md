@@ -58,7 +58,7 @@ Recipe Flex jeszcze nie ma (D-066), więc trzy kroki są ręczne.
 | span `db.query` | każde zapytanie DBAL, tekst po normalizacji SDK, bez parametrów |
 | błąd | wyjątek z `kernel.exception`, bez `HttpException` poniżej 500 |
 
-Trasy z `excluded_routes` i trasy wewnętrzne Symfony (`_wdt`, `_profiler`) nie wysyłają nic. Wysyłka idzie w `kernel.terminate`, czyli po `fastcgi_finish_request()` na PHP-FPM. Nagłówki, ciało żądania i parametry SQL nie trafiają do zdarzeń.
+Trasy z `excluded_routes` nie wysyłają nic. Żądanie z niepustym `_api_resource_class` jest operacją API Platform. Wysyłka idzie w `kernel.terminate`, czyli po `fastcgi_finish_request()` na PHP-FPM. Nagłówki, ciało żądania i parametry SQL nie trafiają do zdarzeń.
 
 ## Wyłączenie
 

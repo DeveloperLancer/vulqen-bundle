@@ -111,6 +111,10 @@ final class HttpListener implements EventSubscriberInterface
 
         $status = $event->getResponse()->getStatusCode();
         $transaction->setName(is_string($route) && $route !== '' ? $route : self::UNMATCHED);
+        $resourceClass = $event->getRequest()->attributes->get('_api_resource_class');
+        if (is_string($resourceClass) && $resourceClass !== '') {
+            $transaction->setApiPlatform(true);
+        }
         $transaction->setHttpStatus($status);
         if ($status >= 500) {
             $transaction->markError();
@@ -123,11 +127,12 @@ final class HttpListener implements EventSubscriberInterface
     }
 
     /**
-     * Trasy z excluded_routes i wewnętrzne trasy Symfony (_wdt, _profiler).
+     * Pusta nazwa oraz `excluded_routes`.
+     * Samo `_` na początku zostaje: domyślna operacja API Platform nazywa się `_api_…`.
      */
     private function excluded(mixed $route): bool
     {
-        return is_string($route) && ($route === '' || $route[0] === '_' || isset($this->excludedRoutes[$route]));
+        return is_string($route) && ($route === '' || isset($this->excludedRoutes[$route]));
     }
 
     private function cpuMs(): ?float

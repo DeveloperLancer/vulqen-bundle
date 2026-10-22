@@ -14,9 +14,9 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { php: "8.2", symfony: "^6.4", dbal: "^3.8" }
-          - { php: "8.3", symfony: "^7.4", dbal: "^4" }
-          - { php: "8.4", symfony: "^7.4", dbal: "^4" }
+          - { php: "8.2.35", symfony: "^6.4", dbal: "^3.8" }
+          - { php: "8.3.36", symfony: "^7.4", dbal: "^4" }
+          - { php: "8.4.27", symfony: "^7.4", dbal: "^4" }
     # vulqen/php-sdk jest prywatnym repozytorium VCS. COMPOSER_AUTH to
     # {"github-oauth": {"github.com": "<token z odczytem DeveloperLancer/vulqen-sdk-php>"}}.
     env:
@@ -32,6 +32,11 @@ jobs:
           extensions: ctype, curl, iconv, mbstring, pdo_sqlite, zlib
           coverage: none
           tools: composer:v2
+
+      - name: Require patched PHP
+        env:
+          PHP_FLOOR: ${{ matrix.php }}
+        run: php -r 'if (version_compare(PHP_VERSION, getenv("PHP_FLOOR"), "<")) { fwrite(STDERR, PHP_VERSION." jest poniżej ".getenv("PHP_FLOOR")." (CVE-2026-109618, CVE-2026-109619).\n"); exit(1); }'
 
       - name: Validate Composer manifest
         run: composer validate --strict --no-check-publish
